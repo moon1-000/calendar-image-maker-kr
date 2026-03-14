@@ -5,18 +5,16 @@ from datetime import datetime, date
 import io
 import os
 import holidays
-import urllib.request # 💡 인터넷에서 폰트를 다운받기 위한 도구 추가
+import urllib.request
 
 # --- 폰트 및 데이터 설정 ---
 def get_font(font_option, uploaded_font, size, lang, force_bold=False):
-    # 1. 사용자가 직접 올린 폰트가 있다면 최우선 적용
     if uploaded_font is not None:
         try:
             return ImageFont.truetype(io.BytesIO(uploaded_font.getvalue()), size)
         except:
             st.error("폰트 파일을 읽을 수 없습니다.")
     
-    # 한국어일 때 Arial 깨짐 방지
     actual_font = font_option
     if lang == "한국어" and font_option == "Arial":
         actual_font = "맑은 고딕"
@@ -32,17 +30,14 @@ def get_font(font_option, uploaded_font, size, lang, force_bold=False):
     if force_bold:
         font_file = font_file.replace(".ttf", "bd.ttf").replace(".ttc", "bd.ttc")
     
-    # 2. 로컬(내 컴퓨터) 윈도우 환경일 경우
     path = os.path.join("C:\\Windows\\Fonts", font_file)
     if os.path.exists(path):
         return ImageFont.truetype(path, size)
     
-    # 3. 💡 클라우드(인터넷) 환경일 경우: 크기 조절이 가능한 나눔고딕 자동 다운로드 적용
     cloud_font_name = "NanumGothicBold.ttf" if force_bold else "NanumGothicRegular.ttf"
     
     if not os.path.exists(cloud_font_name):
         try:
-            # 구글 서버에서 폰트 파일 실시간 가져오기
             url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf" if force_bold else "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
             urllib.request.urlretrieve(url, cloud_font_name)
         except:
@@ -51,7 +46,6 @@ def get_font(font_option, uploaded_font, size, lang, force_bold=False):
     if os.path.exists(cloud_font_name):
         return ImageFont.truetype(cloud_font_name, size)
         
-    # 만약 모든게 실패하면 비상용 폰트 사용
     return ImageFont.load_default()
 
 def get_calendar_data(year, month, lang, use_holidays):
@@ -137,5 +131,9 @@ st.markdown("<h2 style='margin-top: 0px;'>📅 달력 배경화면 생성기</h2
 
 with st.sidebar:
     st.header("1. 기기 규격 설정")
-    category = st.selectbox("기기 분류", 
-                            ["스마트폰 (1080x2340)", "태블릿 (2048x2732)", "이북 리더기 (758x1024)", "
+    
+    # 💡 에러 방지를 위해 리스트를 세로로 안전하게 배치했습니다.
+    category_list = [
+        "스마트폰 (1080x2340)",
+        "태블릿 (2048x2732)",
+        "이
