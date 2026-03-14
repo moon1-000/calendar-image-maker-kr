@@ -1,25 +1,147 @@
-st.header("4. 배경 설정")
-    bg_type = st.radio("배경", ["단색 컬러", "이미지 업로드"], horizontal=True, index=0)
+import streamlit as st
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageColor
+import calendar
+from datetime import datetime, date
+import io
+import os
+import holidays
+import urllib.request
+
+# --- 폰트 로직 (안정화 버전) ---
+def get_font(font_option, uploaded_font, size, lang, force_bold=False):
+    if uploaded_font is not None:
+        try:
+            return ImageFont.truetype(io.BytesIO(uploaded_font.getvalue()), size)
+        except: pass
+    font_urls = {
+        "나눔고딕": "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf",
+        "나눔고딕_Bold": "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf",
+        "바탕체": "https://github.com/google/fonts/raw/main/ofl/nanummyeongjo/NanumMyeongjo-Regular.ttf",
+        "바탕체_Bold": "https://github.com/google/fonts/raw/main/ofl/nanummyeongjo/NanumMyeongjo-Bold.ttf"
+    }
+    target_key = font_option
+    if font_option in ["Arial", "맑은 고딕", "나눔고딕"]:
+        target_key = "나눔고딕_Bold" if force_bold else "나눔고딕"
+    elif font_option == "바탕체":
+        target_key = "바탕체_Bold" if force_bold else "바탕체"
+    file_name = f"{target_key}.ttf"
+    if not os.path.exists(file_name):
+        try:
+            url = font_urls.get(target_key, font_urls["나눔고딕"])
+            urllib.request.urlretrieve(url, file_name)
+        except: return ImageFont.load_default()
+    return ImageFont.truetype(file_name, size)
+
+def get_calendar_data(year, month, lang, use_holidays):
+    cal = calendar.TextCalendar(calendar.SUNDAY)
+    weeks = cal.monthdayscalendar(year, month)
+    kr_h = holidays.KR(years=year) if use_holidays else {}
+    if lang == "한국어":
+        m_n, hds = f"{month}월", ["일", "월", "화", "수", "목", "금", "토"]
+    else:
+        m_n, hds = calendar.month_name[month].upper(), ["S", "M", "T", "W", "T", "F", "S"]
+    return m_n, hds, weeks, kr_h
+
+# --- 생성 함수 ---
+def generate_wallpaper(width, height, year, month, pos_ratio, bg_type, bg_color, bg_image, bg_rotate, bg_x, bg_y, text_color_hex, font_size, x_spacing, y_spacing, lang, font_family, uploaded_font, is_bold, use_holidays, show_box, box_color_hex, box_opacity, box_radius, show_watermark):
+    # 배경 처리
+    if bg_type == "이미지 업로드" and bg_image is not None:
+        img = Image.open(bg_image).convert("RGBA")
+        # 회전
+        img = img.rotate(bg_rotate, expand=True)
+        # 꽉 채우기 리사이즈
+        w_r, h_r = width / img.width, height / img.height
+        n_w, n_h = int(img.width * max(w_r, h_r)), int(img.height * max(w_r, h_r))
+        img = img.resize((n_w, n_h), resample=Image.LANCZOS)
+        # 위치 이동 계산
+        off_x = int((bg_x / 100) * (n_w - width))
+        off_y = int((bg_y / 100) * (n_h - height))
+        left = int((n_w - width)/2) + off_x
+        top = int((n_h - height)/2) + off_y
+        img = img.crop((left, top, left + width, top + height))
+    else:
+        img = Image.new('RGBA', (width, height), color=bg_color)
     
-    # 💡 변수 초기화 (에러 방지)
-    bg_rotate = 0
-    bg_x = 0
-    bg_y = 0
-    bg_image = None
+    overlay = Image.new('RGBA', img.size, (0,0,0,0))
+    draw = ImageDraw.Draw(overlay)
+    m_n, hds, wks, kr_h = get_calendar_data(year, month, lang, use_holidays)
+    b_f = get_font(font_family, uploaded_font, int(font_size * 1.5), lang, True)
+    r_f = get_font(font_family, uploaded_font, font_size, lang, is_bold)
+    t_c, r_c = ImageColor.getrgb(text_color_hex), (220, 20, 60, 255)
+    c_w, r_h = font_size * x_spacing, font_size * y_spacing
+    cal_w, cal_h = c_w * 7, r_h * (len(wks) + 2.5)
+    s_x, s_y = (width - cal_w) / 2, (height * (pos_ratio / 100)) - (cal_h / 2)
+    
+    if show_box:
+        bc = ImageColor.getrgb(box_color_hex)
+        draw.rounded_rectangle([s_x - 40, s_y - 40, s_x + cal_w + 40, s_y + cal_h + 40], radius=box_radius, fill=(bc[0], bc[1], bc[2], int(255 * (box_opacity/100))))
+    draw.text((width/2, s_y + r_h/2), m_n, fill=t_c, font=b_f, anchor="mm")
+    h_y = s_y + (r_h * 2)
+    for i, h in enumerate(hds):
+        draw.text((s_x + (i * c_w) + (c_w/2), h_y), h, fill=r_c if i == 0 else t_c, font=r_f, anchor="mm")
+    for ri, wk in enumerate(wks):
+        y = h_y + (r_h * (ri + 1))
+        for ci, dy in enumerate(wk):
+            if dy != 0:
+                is_h = date(year, month, dy) in kr_h
+                draw.text((s_x + (ci * c_w) + (c_w/2), y), str(dy), fill=r_c if (ci == 0 or is_h) else t_c, font=r_f, anchor="mm")
+    if show_watermark:
+        w_f = get_font(font_family, uploaded_font, 20, lang, True)
+        draw.text((width - 30, height - 30), "Moon1", fill=t_c, font=w_f, anchor="rd")
+    return Image.alpha_composite(img, overlay).convert("RGB")
+
+# --- UI 레이아웃 ---
+st.set_page_config(page_title="달력 배경화면 생성기", layout="wide")
+st.markdown("<h2 style='margin-top: 0px;'>📅 달력 배경화면 생성기</h2>", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.header("1. 기기 규격 설정")
+    category_list = ["스마트폰 (1080x2340)", "태블릿 (2048x2732)", "이북 리더기 (758x1024)", "직접 입력"]
+    category = st.selectbox("기기 분류", category_list, index=2)
+    res_map = {"스마트폰 (1080x2340)": (1080, 2340), "태블릿 (2048x2732)": (2048, 2732), "이북 리더기 (758x1024)": (758, 1024)}
+    w, h = (st.number_input("가로", value=1080), st.number_input("세로", value=1920)) if category == "직접 입력" else res_map[category]
+    
+    st.header("2. 날짜 및 위치")
+    c1, c2 = st.columns(2)
+    year, month = c1.number_input("년", value=2026), c2.number_input("월", 1, 12, 3)
+    is_landscape = st.checkbox("🔄 가로로 돌리기", value=False)
+    if is_landscape: w, h = h, w
+    use_holidays, pos_val = st.checkbox("대한민국 공휴일 반영", value=True), st.slider("세로 위치 (%)", 0, 100, 50)
+    
+    st.header("3. 달력 디자인")
+    lang = st.radio("언어", ["English", "한국어"], horizontal=True)
+    font_f = st.selectbox("서체", ["Arial", "맑은 고딕", "바탕체", "나눔고딕"], index=0)
+    is_bold, t_color = st.checkbox("볼드체 설정", value=False), st.color_picker("텍스트 색상", "#000000")
+    up_font = st.file_uploader("외부 폰트 추가", type=['ttf', 'otf'])
+    f_size = st.slider("글자 크기", 10, 120, 40)
+    x_s, y_s = st.slider("가로 간격", 1.0, 5.0, 2.5), st.slider("세로 간격", 1.0, 5.0, 2.0)
+    
+    st.header("4. 배경 설정")
+    bg_type = st.radio("배경 종류", ["단색 컬러", "이미지 업로드"], horizontal=True)
+    
+    # 💡 변수 초기화 (이미지 업로드 모드일 때 항상 작동하도록 밖으로 뺌)
+    bg_rotate, bg_x, bg_y, bg_img, bg_color = 0, 0, 0, None, "#FFFFFF"
     
     if bg_type == "이미지 업로드":
-        bg_image = st.file_uploader("이미지 업로드", type=['jpg', 'png', 'jpeg'])
-        bg_color = "#FFFFFF"
-        
-        # 💡 사진을 올리면 바로 조작 메뉴가 보이게 하되, 
-        # 사용자가 "여기서 조절하는구나"를 알 수 있게 안내 문구 추가
-        if bg_image is not None:
-            st.info("💡 아래 슬라이더로 사진의 위치와 방향을 조절하세요.")
-            bg_rotate = st.slider("회전 (도)", 0, 360, 0, step=90)
-            bg_x = st.slider("가로 위치 미세 조정", -100, 100, 0)
-            bg_y = st.slider("세로 위치 미세 조정", -100, 100, 0)
-        else:
-            st.warning("먼저 이미지를 업로드해 주세요.")
-            
+        bg_img = st.file_uploader("이미지 업로드", type=['jpg', 'png', 'jpeg'])
+        # 💡 사진 업로드 여부와 상관없이 슬라이더를 무조건 노출!
+        st.markdown("---")
+        st.write("🖼️ **이미지 조작** (사진 업로드 후 조절하세요)")
+        bg_rotate = st.slider("회전 (도)", 0, 360, 0, 90)
+        bg_x = st.slider("가로 위치 미세 조정 (%)", -100, 100, 0)
+        bg_y = st.slider("세로 위치 미세 조정 (%)", -100, 100, 0)
     else:
         bg_color = st.color_picker("배경색 선택", "#FFFFFF")
+    
+    st.markdown("---")
+    show_box = st.checkbox("가독성 박스 추가(이미지 배경 시)", value=False)
+    bx_c, bx_o, bx_r = st.color_picker("바탕 색상", "#FFFFFF"), st.slider("바탕 투명도", 0, 100, 100), st.slider("바탕 모서리 곡률", 0, 100, 20)
+    st.header("5. 제작자 출처 표기")
+    show_wm = st.checkbox("Moon1 마크 표시", value=False)
+
+# 결과 생성
+final_img = generate_wallpaper(w, h, year, month, pos_val, bg_type, bg_color, bg_img, bg_rotate, bg_x, bg_y, t_color, f_size, x_s, y_s, lang, font_f, up_font, is_bold, use_holidays, show_box, bx_c, bx_o, bx_r, show_wm)
+st.image(final_img, width=400)
+buf = io.BytesIO()
+final_img.save(buf, format="PNG")
+st.download_button("📥 이미지 저장", buf.getvalue(), f"calendar_{year}_{month}.png")
