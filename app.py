@@ -107,7 +107,7 @@ with st.sidebar:
     font_family = st.selectbox("서체", ["Arial", "맑은 고딕", "바탕체", "나눔고딕"], index=0)
     is_bold, text_color = st.checkbox("볼드체 설정", value=False), st.color_picker("텍스트 색상", "#000000")
     uploaded_font = st.file_uploader("외부 폰트 추가 (.ttf, .otf)", type=['ttf', 'otf'])
-    font_size = st.slider("글자 크기", 10, 120, 40)
+    font_size = st.slider("글자 크기", 10, 120, 35)
     x_s, y_s = st.slider("가로 간격", 1.0, 5.0, 2.5), st.slider("세로 간격", 1.0, 5.0, 2.0)
     st.header("4. 배경 설정")
     bg_type = st.radio("배경", ["단색 컬러", "이미지 업로드"], horizontal=True)
