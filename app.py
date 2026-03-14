@@ -149,7 +149,7 @@ with st.sidebar:
     custom_text = ""
     if show_custom:
         custom_text = st.text_input("적고 싶은 문구 입력", value="내 이름")
-    wm_color = st.color_picker("출처 글자 색상", "#000000")
+    wm_color = st.color_picker("하단 글자 색상", "#000000")
     
     st.markdown("---")
     st.info("6️⃣ **초기화**")
