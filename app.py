@@ -104,7 +104,7 @@ with st.sidebar:
     st.info("2️⃣ **달력 시기 및 위치**")
     c1, c2 = st.columns(2)
     year, month = c1.number_input("년", value=2026), c2.number_input("월", 1, 12, 3)
-    is_landscape = st.checkbox("🔄 가로로 돌리기", value=False)
+    is_landscape = st.checkbox("가로로 돌리기", value=False)
     if is_landscape: w, h = h, w
     use_holidays, pos_val = st.checkbox("대한민국 공휴일 반영", value=True), st.slider("세로 위치 (%)", 0, 100, 50)
     
@@ -122,7 +122,7 @@ with st.sidebar:
     else: 
         bg_color = st.color_picker("배경색 선택", "#FFFFFF")
     
-    st.write("🕶️ **박스 설정**")
+    st.write("🖼️ **박스 설정**")
     show_box = st.checkbox("가독성 박스 추가(이미지 배경 시)", value=False)
     if show_box:
         bx_c = st.color_picker("바탕 박스 색상", "#FFFFFF")
@@ -134,7 +134,7 @@ with st.sidebar:
     lang = st.radio("언어", ["English", "한국어"], horizontal=True)
     font_f = st.selectbox("서체", ["Arial", "맑은 고딕", "바탕체", "나눔고딕"], index=0)
     is_bold = st.checkbox("볼드체 설정", value=False)
-    with st.expander("📁 외부 폰트 추가"):
+    with st.expander("외부 폰트 추가"):
         up_font = st.file_uploader("폰트 파일 (.ttf, .otf)", type=['ttf', 'otf'])
     
     t_color = st.color_picker("텍스트 색상", "#000000")
@@ -158,7 +158,7 @@ with st.sidebar:
         for key in st.session_state.keys(): del st.session_state[key]
         st.rerun()
 
-    st.caption("🚀 최종 수정: 2026.03.15.04.10")
+    st.caption("최종 수정: 2026.03.15.04.10")
 
 # 결과 생성
 final_img = generate_wallpaper(w, h, year, month, pos_val, bg_type, bg_color, bg_img, bg_rotate, bg_x, bg_y, bg_zoom, t_color, f_size, x_s, y_s, lang, font_f, up_font, is_bold, use_holidays, show_box, bx_c, bx_o, bx_r, show_moon1, show_custom, custom_text, wm_color)
