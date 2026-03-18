@@ -7,3 +7,5 @@ moon1/calendar-image-maker-kr
 아래 링크에서 실행가능합니다.
 
 https://moon1-calendar-image-maker-kr-n6qv69nmdsrorxkbkkbnaa.streamlit.app/
+
+혹시 위 링크에서 Zzz..가 뜬다면 하단의 파랑 박스 Yes, get this app back up!을 누르시면 작동합니다.
